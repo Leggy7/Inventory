@@ -219,6 +219,15 @@ namespace GUI.Inventory
             _picked = null;
             State = InventoryState.Idle;
             _audioPlayer.PlayPick();
+
+            for (var x = 0; x < _cells.GetLength(0); x++)
+            {
+                for (var y = 0; y < _cells.GetLength(1); y++)
+                {
+                    var cell = _cells[x, y];
+                    if(!cell.Empty) cell.ToggleDarkness(isLight: true);
+                }                
+            }
         }
 
         private void DeleteItem()
