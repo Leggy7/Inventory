@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Resolutions;
@@ -25,7 +23,7 @@ namespace GUI.Resolution
         public Image nextIcon;
         public PlayerInput input;
         
-        private Dictionary<ResolutionType, Text> textMap = new Dictionary<ResolutionType, Text>();
+        private Dictionary<ResolutionType, Text> textMap = new();
         private const string StaticLabel = "Current input contorl is";
 
         private void Awake()
