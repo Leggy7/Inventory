@@ -53,7 +53,7 @@ namespace GUI.Inventory
             _audioPlayer = GetComponent<InventoryAudioPlayer>();
             _hintDispenser = transform.Find("Hints").GetComponent<InventoryHintDispenser>();
             
-            InitializeInventory();
+            InitializeInventory().Forget();
             State = InventoryState.Idle;
             
             ResolutionMapper.SetResolution(resolution);
@@ -104,7 +104,7 @@ namespace GUI.Inventory
             UpdateNameLabel(_selected.Name);
         }
 
-        private void InitializeInventory()
+        private async UniTask InitializeInventory()
         {
             _cells = new InventoryCellController[rows, cols];
         
@@ -124,7 +124,15 @@ namespace GUI.Inventory
             PopulateRandomSlots(spawningItems);
             
             _selected = _cells[0, 0];
-            StartCoroutine(WaitAfterInitializeInventory());
+
+            await UniTask.NextFrame();
+            await UniTask.NextFrame();
+            
+            selection.SetActive(true);
+            selection.GetComponent<CellSelectionController>().
+                SetAtPosition(_cells[0, 0].GetComponent<RectTransform>().position);
+            floatingItem.transform.SetAsLastSibling();
+            selection.transform.SetAsLastSibling();
         }
 
         private void PopulateRandomSlots(int howMany)
@@ -135,22 +143,6 @@ namespace GUI.Inventory
                 var randomSlot = PickRandomSlot();
                 randomSlot.LoadContentInfo(_itemInfos[Random.Range(0, _itemInfos.Length)]);
             }
-        }
-
-        /// <summary>
-        /// This is due because it needs to be called after inventory grid population.
-        /// Thus, we need to wait a couple of frames.
-        /// </summary>
-        /// <returns></returns>
-        private IEnumerator WaitAfterInitializeInventory()
-        {
-            yield return null;
-            yield return null;
-            selection.SetActive(true);
-            selection.GetComponent<CellSelectionController>().
-                SetAtPosition(_cells[0, 0].GetComponent<RectTransform>().position);
-            floatingItem.transform.SetAsLastSibling();
-            selection.transform.SetAsLastSibling();
         }
 
         private InventoryCellController PickRandomSlot(bool empty = true)
