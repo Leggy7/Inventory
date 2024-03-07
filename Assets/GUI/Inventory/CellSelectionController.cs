@@ -1,5 +1,5 @@
-using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -47,7 +47,7 @@ namespace GUI.Inventory
             directionStack.Add(where);
             if (IsMoving) return;
             
-            StartCoroutine(TransposeSelection());
+            TransposeSelection().Forget();
         }
 
         public void GetItem(ItemInfo info)
@@ -96,8 +96,8 @@ namespace GUI.Inventory
             overlayItem.sprite = null;
             overlayItem.gameObject.SetActive(false);
         }
-    
-        private IEnumerator TransposeSelection()
+
+        private async UniTask TransposeSelection()
         {
             IsMoving = true;
             var rectTransform = GetComponent<RectTransform>();
@@ -120,7 +120,7 @@ namespace GUI.Inventory
                     if (amountMoved > amountToMove) frameDelta -= amountMoved - amountToMove;
                     rectTransform.position += direction * frameDelta;
                     duration -= Time.deltaTime;
-                    yield return null;
+                    await UniTask.NextFrame();
                 }
 
                 rectTransform.position = endPosition;
