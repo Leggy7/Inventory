@@ -270,6 +270,7 @@ namespace GUI.Inventory
 
         private void UpdateHints()
         {
+            if (!_hintDispenser) return;
             _hintDispenser.UpdateHints(
                 State == InventoryState.Picked, 
                 !_selected.Empty);
