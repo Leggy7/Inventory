@@ -1,4 +1,5 @@
 using System.Collections;
+using Cysharp.Threading.Tasks;
 using GUI.Resolution;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -42,7 +43,7 @@ namespace GUI.Advanced
 
         public void Quit()
         {
-            StartCoroutine(TararaAndQuit());
+            TararaAndQuit().Forget();
         }
 
         public void Advanced()
@@ -98,14 +99,14 @@ namespace GUI.Advanced
             return icon;
         }
 
-        private IEnumerator TararaAndQuit()
+        private async UniTask TararaAndQuit()
         {
             _audio.clip = quitSound;
             _audio.Play();
             
             while (_audio.isPlaying)
             {
-                yield return null;
+                await UniTask.NextFrame();
             }
             
             #if UNITY_EDITOR
