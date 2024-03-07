@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Cysharp.Threading.Tasks;
 using GUI.Advanced;
 using GUI.Resolution;
 using Resolutions;
@@ -211,13 +212,15 @@ namespace GUI.Inventory
             _audioPlayer.PlayPick();
         }
 
-        private void SwapItems()
+        private async UniTask SwapItems()
         {
             _landingItem = true;
             var info = CreateItemInfo(_selected);
             _swappingCell = _picked;
             floatingItem.Setup(info, _selected.GetComponent<RectTransform>().position);
-            floatingItem.Move(_picked.GetComponent<RectTransform>().position);
+            
+            await floatingItem.Move(_picked.GetComponent<RectTransform>().position);
+            
             _picked.Select(false);
             selection.GetComponent<CellSelectionController>().ReleaseItem();
             _picked = null;
@@ -330,7 +333,7 @@ namespace GUI.Inventory
             }
             else if (State == InventoryState.Picked && !_selected.Empty)
             {
-                SwapItems();
+                SwapItems().Forget();
             }
 
             ToggleDarkness();
