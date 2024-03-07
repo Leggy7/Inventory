@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using Resolutions;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -42,14 +43,14 @@ namespace GUI.Resolution
 
         public void UpdateLabel()
         {
-            StartCoroutine(WaitAndUpdate());
+            WaitAndUpdate().Forget();
         }
 
-        private IEnumerator WaitAndUpdate()
+        private async UniTask WaitAndUpdate()
         {
             // wait a couple of frame to let the system update the resolution
-            yield return null;
-            yield return null;
+            await UniTask.NextFrame();
+            await UniTask.NextFrame();
             
             foreach (var item in textMap)
             {
