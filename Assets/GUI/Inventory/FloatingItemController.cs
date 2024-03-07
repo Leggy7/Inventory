@@ -1,4 +1,5 @@
 using System.Collections;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,12 +27,12 @@ namespace GUI.Inventory
             _transform.position = startingPosition;
         }
 
-        public void Move(Vector3 destination)
+        public async UniTask Move(Vector3 destination)
         {
-            StartCoroutine(Moving(destination));
+            await Moving(destination);
         }
 
-        private IEnumerator Moving(Vector3 destination)
+        private async UniTask Moving(Vector3 destination)
         {
             var p = _transform.position;
             var difference = destination - p;
@@ -45,7 +46,7 @@ namespace GUI.Inventory
                 amountMoved += frameAmount;
                 if (amountMoved > amountToMove) frameAmount -= amountMoved - amountToMove;
                 _transform.position += frameAmount * direction;
-                yield return null;
+                await UniTask.NextFrame();
             }
 
             inventory.ReceiveItem(_item, true);

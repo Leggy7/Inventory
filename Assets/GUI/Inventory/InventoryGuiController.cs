@@ -2,8 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Cysharp.Threading.Tasks;
 using GUI.Advanced;
 using GUI.Resolution;
+using JetBrains.Annotations;
 using Resolutions;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -51,7 +53,7 @@ namespace GUI.Inventory
             _audioPlayer = GetComponent<InventoryAudioPlayer>();
             _hintDispenser = transform.Find("Hints").GetComponent<InventoryHintDispenser>();
             
-            InitializeInventory();
+            InitializeInventory().Forget();
             State = InventoryState.Idle;
             
             ResolutionMapper.SetResolution(resolution);
@@ -102,7 +104,7 @@ namespace GUI.Inventory
             UpdateNameLabel(_selected.Name);
         }
 
-        private void InitializeInventory()
+        private async UniTask InitializeInventory()
         {
             _cells = new InventoryCellController[rows, cols];
         
@@ -122,7 +124,15 @@ namespace GUI.Inventory
             PopulateRandomSlots(spawningItems);
             
             _selected = _cells[0, 0];
-            StartCoroutine(WaitAfterInitializeInventory());
+
+            await UniTask.NextFrame();
+            await UniTask.NextFrame();
+            
+            selection.SetActive(true);
+            selection.GetComponent<CellSelectionController>().
+                SetAtPosition(_cells[0, 0].GetComponent<RectTransform>().position);
+            floatingItem.transform.SetAsLastSibling();
+            selection.transform.SetAsLastSibling();
         }
 
         private void PopulateRandomSlots(int howMany)
@@ -133,22 +143,6 @@ namespace GUI.Inventory
                 var randomSlot = PickRandomSlot();
                 randomSlot.LoadContentInfo(_itemInfos[Random.Range(0, _itemInfos.Length)]);
             }
-        }
-
-        /// <summary>
-        /// This is due because it needs to be called after inventory grid population.
-        /// Thus, we need to wait a couple of frames.
-        /// </summary>
-        /// <returns></returns>
-        private IEnumerator WaitAfterInitializeInventory()
-        {
-            yield return null;
-            yield return null;
-            selection.SetActive(true);
-            selection.GetComponent<CellSelectionController>().
-                SetAtPosition(_cells[0, 0].GetComponent<RectTransform>().position);
-            floatingItem.transform.SetAsLastSibling();
-            selection.transform.SetAsLastSibling();
         }
 
         private InventoryCellController PickRandomSlot(bool empty = true)
@@ -211,13 +205,15 @@ namespace GUI.Inventory
             _audioPlayer.PlayPick();
         }
 
-        private void SwapItems()
+        private async UniTask SwapItems()
         {
             _landingItem = true;
             var info = CreateItemInfo(_selected);
             _swappingCell = _picked;
             floatingItem.Setup(info, _selected.GetComponent<RectTransform>().position);
-            floatingItem.Move(_picked.GetComponent<RectTransform>().position);
+            
+            await floatingItem.Move(_picked.GetComponent<RectTransform>().position);
+            
             _picked.Select(false);
             selection.GetComponent<CellSelectionController>().ReleaseItem();
             _picked = null;
@@ -236,15 +232,13 @@ namespace GUI.Inventory
             UpdateNameLabel(_selected.Name);
         }
 
-        private IEnumerator ReloadInventory()
+        private async UniTask ReloadInventory()
         {
             var items = GameObject.FindGameObjectsWithTag("InventorySlot")
-                .Where(x => !x.GetComponent<InventoryCellController>().Empty).Select(x => x.GetComponent<InventoryCellController>());
+                .Where(x => !x.GetComponent<InventoryCellController>().Empty).Select(x => x.GetComponent<InventoryCellController>())
+                .ToArray();
 
-            var inventoryCellControllers = items as InventoryCellController[] ?? items.ToArray();
-            Debug.Log($"I found {items.Count()} cells to flip");
-            Debug.Log($"Corresponding to {inventoryCellControllers.Count()} controllers.");
-            foreach (var item in inventoryCellControllers)
+            foreach (var item in items)
             {
                 item.BeginFlip();
             }
@@ -252,13 +246,13 @@ namespace GUI.Inventory
             while (true)
             {
                 var animationEnded = true;
-                foreach (var item in inventoryCellControllers.Select(i => i.GetComponent<Animator>()))
+                foreach (var item in items.Select(i => i.GetComponent<Animator>()))
                 {
                     if (item.GetBool(Flip)) animationEnded = false;
                 }
 
                 if (animationEnded) break;
-                yield return null;
+                await UniTask.NextFrame();
             }
             
             _audioPlayer.PlayReroll();
@@ -270,6 +264,7 @@ namespace GUI.Inventory
 
         private void UpdateHints()
         {
+            if (!_hintDispenser) return;
             _hintDispenser.UpdateHints(
                 State == InventoryState.Picked, 
                 !_selected.Empty);
@@ -329,7 +324,7 @@ namespace GUI.Inventory
             }
             else if (State == InventoryState.Picked && !_selected.Empty)
             {
-                SwapItems();
+                SwapItems().Forget();
             }
 
             ToggleDarkness();
@@ -337,10 +332,18 @@ namespace GUI.Inventory
 
         private void OnCancel()
         {
-            if (State == InventoryState.Idle) StartCoroutine(ReloadInventory());
-            if (State != InventoryState.Picked) return;
-            DeleteItem();
-            ToggleDarkness();
+            switch (State)
+            {
+                case InventoryState.Idle:
+                    ReloadInventory().Forget();
+                    break;
+                case InventoryState.Picked:
+                    DeleteItem();
+                    ToggleDarkness();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         private void OnNextResolution()
@@ -369,6 +372,7 @@ namespace GUI.Inventory
             advancedGui.Advanced();
         }
 
+        [UsedImplicitly]
         private void OnControlsChanged()
         {
             UpdateHints();

@@ -1,6 +1,5 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using Resolutions;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -24,7 +23,7 @@ namespace GUI.Resolution
         public Image nextIcon;
         public PlayerInput input;
         
-        private Dictionary<ResolutionType, Text> textMap = new Dictionary<ResolutionType, Text>();
+        private Dictionary<ResolutionType, Text> textMap = new();
         private const string StaticLabel = "Current input contorl is";
 
         private void Awake()
@@ -42,14 +41,14 @@ namespace GUI.Resolution
 
         public void UpdateLabel()
         {
-            StartCoroutine(WaitAndUpdate());
+            WaitAndUpdate().Forget();
         }
 
-        private IEnumerator WaitAndUpdate()
+        private async UniTask WaitAndUpdate()
         {
             // wait a couple of frame to let the system update the resolution
-            yield return null;
-            yield return null;
+            await UniTask.NextFrame();
+            await UniTask.NextFrame();
             
             foreach (var item in textMap)
             {

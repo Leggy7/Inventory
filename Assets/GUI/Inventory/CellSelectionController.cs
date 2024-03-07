@@ -1,5 +1,5 @@
-using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -14,15 +14,16 @@ namespace GUI.Inventory
         public Color normalColor;
         public Color pickedColor;
 
-        private List<Vector3> directionStack = new List<Vector3>();
+        private readonly List<Vector3> _directionStack = new();
         private AudioSource _audio;
-        private const float transitionduration = 0.15f;
         private ItemInfo _itemInfo;
         private Animator _animator;
         private Image _frameImage;
         private static readonly int PlaceInCorner = Animator.StringToHash("PlaceInCorner");
         private static readonly int Release = Animator.StringToHash("Release");
         private static readonly int Erase = Animator.StringToHash("Erase");
+        
+        private const float TransitionDuration = 0.15f;
 
         private void Awake()
         {
@@ -44,10 +45,10 @@ namespace GUI.Inventory
         }
         public void Move(Vector3 where)
         {
-            directionStack.Add(where);
+            _directionStack.Add(where);
             if (IsMoving) return;
             
-            StartCoroutine(TransposeSelection());
+            TransposeSelection().Forget();
         }
 
         public void GetItem(ItemInfo info)
@@ -96,18 +97,18 @@ namespace GUI.Inventory
             overlayItem.sprite = null;
             overlayItem.gameObject.SetActive(false);
         }
-    
-        private IEnumerator TransposeSelection()
+
+        private async UniTask TransposeSelection()
         {
             IsMoving = true;
             var rectTransform = GetComponent<RectTransform>();
         
-            while(directionStack.Count > 0)
+            while(_directionStack.Count > 0)
             {
-                var endPosition = directionStack[0];
-                directionStack.Remove(endPosition);
+                var endPosition = _directionStack[0];
+                _directionStack.Remove(endPosition);
                 
-                var duration = transitionduration;
+                var duration = TransitionDuration;
                 var p = rectTransform.position;
                 var direction = (endPosition - p).normalized;
                 var amountToMove = (endPosition - p).magnitude;
@@ -120,7 +121,7 @@ namespace GUI.Inventory
                     if (amountMoved > amountToMove) frameDelta -= amountMoved - amountToMove;
                     rectTransform.position += direction * frameDelta;
                     duration -= Time.deltaTime;
-                    yield return null;
+                    await UniTask.NextFrame();
                 }
 
                 rectTransform.position = endPosition;
